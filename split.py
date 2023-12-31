@@ -112,7 +112,7 @@ def re_guess_rects():
 def guess_rects():
   log.info("guess_rects thresh=%d, blur=%d", thresh, blur)
   result = gen_thresh()
-  im2, contours, hierarchy = cv2.findContours(result, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+  contours, hierarchy = cv2.findContours(result, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
   for cnt in contours:
     area = cv2.contourArea(cnt)
     # sane-ish size
@@ -172,7 +172,6 @@ def render():
     box = np.int0(box)
     cv2.drawContours(img, [box], 0, (100, 100, 255), 1)
   cv2.imshow('image', img)
-  
 
 def canvas_click(event, x, y, flags, param):
   global active_point
@@ -197,6 +196,36 @@ def canvas_click(event, x, y, flags, param):
     log.info("Up: %d,%d", x, y)
     active_point = None
     p = (x,y)
+    print(p, rects)
+    #if point inside rect, split rect
+    for (i, rect) in enumerate(rects):
+      corners = cv2.boxPoints(rect)
+      print(corners)
+      xs = list(map(lambda o : o[0], corners))
+      ys = list(map(lambda o : o[1], corners))
+      print(xs, ys)
+      if min(xs) < x and max(xs) > x and min(ys) < y and max(ys) > y:
+        print("Inside rect", i, rect, corners)
+        rects.pop(i)
+
+        minx = min(xs)
+        maxx = max(xs)
+        miny = min(ys)
+        maxy = max(ys)
+
+        p1 = [(minx, miny), (maxx, miny), (minx, y), (maxx, y)]
+        p2 = [(minx, y), (maxx, y), (minx, maxy), (maxx, maxy)]
+
+        rect1 = cv2.minAreaRect(np.int0(p1))
+        rect2 = cv2.minAreaRect(np.int0(p2))
+
+        rects.append(rect1)
+        rects.append(rect2)
+
+        render()
+
+        return
+
     if len(points) < 4:
       points.append(p)
     render()
